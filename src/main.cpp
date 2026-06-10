@@ -17,18 +17,15 @@ int main(int argc, char** argv) {
 	std::ofstream out("output/image.ppm", std::ios::trunc);
 	out << "P3\n" << width << " " << height << "\n255\n";
 	std::vector<Object*> object;
-	std::vector<Light> lights;
+	
 
-	Sphere sphere1(1.0, Vec3(0, 0, -2), new Material(Vec3(0.8, 0.2, 0.2),0.8,30.0,0.5,0.001,0.001));
-	Sphere sphere2(0.6, Vec3(2.0,0,-3), new Material(Vec3(0.5, 0.5, 0.5),0.8,50.0,0.1,0.95,1.5));
-	Plane* ground = new Plane(Vec3(0, 1, 0), -1.0, new Material(Vec3(0.3, 0.3, 0.3), 0.8, 20.0,0.01,0.001,0.001));
+	Sphere sphere1(1.0, Vec3(0, 0, -2), new Material(Vec3(0.8, 0.2, 0.2),0.8));
+	Sphere sphere2(0.6, Vec3(2.0,0,-3), new Material(Vec3(0.5, 0.5, 0.5),0.8));
+	Plane* ground = new Plane(Vec3(0, 1, 0), -1.0, new Material(Vec3(0.3, 0.3, 0.3), 0.8));
 
     object.push_back(ground);
 	object.push_back(&sphere1);
 	object.push_back(&sphere2);
-
-    lights.push_back(Light(Vec3(0.8, 1, 1), Vec3(2, 1.5, 1), 1.0));
-	lights.push_back(Light(Vec3(0.1, 0.5, 0.2), Vec3(2.0, 1.0, 1), 0.5));
 
 	BVHNode *bvh_root=build_bvh(object,0,object.size()-1);
 
@@ -47,7 +44,7 @@ int main(int argc, char** argv) {
             );
             dir = dir.normalize();
 			Ray ray(Vec3(0, 0, 0), dir);
-			color=color+compute_color(0,ray,object,lights,bvh_root);
+			color=color+compute_color(0,ray,bvh_root);
         	}
             color=color/pixle_sample;
 

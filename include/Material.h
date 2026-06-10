@@ -4,11 +4,8 @@
 struct Material{
 	Vec3 color;
 	double albedo;
-	double specular;
-	double reflectivity;
-	double transparency;
-	double refractivity;
-	Material(Vec3 col,double albe,double spe,double re,double tr,double ref):color(col),albedo(albe),specular(spe),reflectivity(re),transparency(tr),refractivity(ref){}
+	
+	Material(Vec3 col,double albe):color(col),albedo(albe){}
 	
 };
 

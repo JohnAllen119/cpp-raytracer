@@ -38,17 +38,6 @@ BVHNode *build_bvh(std::vector<Object*>&objects,int start,int end,int depth){
 	return node;
 }
 
-Vec3 compute_refract_ray(double n1,double n2,const Vec3 &incident_dir,const Vec3 &normal){
-	double cos1=-incident_dir.dot(normal);
-	double sin1=std::sqrt(1-cos1*cos1);
-	double sin2=n1/n2*sin1;
-	double cos2=std::sqrt(1-sin2*sin2);
-	if(sin2>1.0){
-		return Vec3(0,0,0);
-	}
-	Vec3 T= incident_dir * (n1/n2) + normal * ((n1/n2) * cos1 - cos2);
-    return T;
-}
 
 Object *bvh_hit_object=NULL;
 
@@ -112,92 +101,38 @@ Vec3 random_hemisphere_direction(const Vec3 &normal) {
 	return tangent*local_dir.x + biotangent*local_dir.y + normal*local_dir.z;
 }
 
-double ao_compute(const Vec3 &p,const Vec3 &normal,BVHNode *bvh_root,int samples,double max_dist){
-	double occlusion=0.0;
-	for(int i=0;i<samples;i++){
-		Vec3 dir=random_hemisphere_direction(normal);
-		Ray ao_ray(p+dir*0.001,dir);
-		double t=bvh_intersect(bvh_root,ao_ray);
-		if(t>0&&t<max_dist){
-			occlusion+=1.0;
-		}
+Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root){
+	if(depth>=5){
+		return Vec3(0,0,0);
 	}
-	return occlusion/samples;
-}
-
-Vec3 compute_color(int depth,const Ray &ray,std::vector<Object*> &object,std::vector<Light> &lights,BVHNode *bvh_root){
+	//bvh
 	bvh_hit_object=NULL;
 	double obj_t=bvh_intersect(bvh_root,ray);
 	Object *hitObj=bvh_hit_object;
-	Vec3 ambient_color=Vec3(0.15,0.15,0.15);
-	Vec3 color=ambient_color;
+
 	
-	if(obj_t > 0){
+	if(obj_t > 0&&hitObj){
 		Object *sphere=hitObj;
 		Material* mat=sphere->mat; 
 		Vec3 p=ray.at(obj_t);
-		Vec3 normal=sphere->getnormal(p); 
+		Vec3 normal=sphere->getnormal(p).normalize(); 
 
-		double ao=ao_compute(p,normal,bvh_root,8,2.0);
-		double ao_factor=1.0-ao*0.8;
-		color = color * ao_factor;
+		//ensure normal dir
+		if(normal.dot(ray.direction)>0) normal=-normal;
 
-		for(int l=0;l<lights.size();l++){
-			Light light=lights[l];
-			Vec3 light_dir=(light.direction-p).normalize();
+		//produce random_dir
+		Vec3 random_dir=random_hemisphere_direction(normal);
+		//produce random scattering dir
+		Ray scattering_ray(p+normal*0.001,random_dir);
 
-			double diffuse=std::max(0.0,normal.dot(light_dir));
-			double dot=normal.dot(light_dir);
-			
-			Vec3 spe_dir=((normal*dot*2)-light_dir).normalize();
-			Vec3 view_dir=(ray.origin-p).normalize();
-			double specular = std::pow(std::max(0.0, spe_dir.dot(view_dir)),mat->specular);
-			Vec3 specular_color=light.color*specular*0.5;
-			Vec3 diffuse_color=mat->color*mat->albedo*diffuse*light.intensity;
-			
-			Ray shadow_ray(p+normal*0.01,light_dir);
-			bool inshadow=false;
-			for(int k=0;k<object.size();k++){
-				if(object[k]==hitObj){
-					continue;
-				}
-				double shadow_t=object[k]->is_hit(shadow_ray);
-				if(shadow_t > 0){
-					inshadow=true;
-					break;
-				}
-			} 
-			
-			if(!inshadow){
-				color = color + diffuse_color + specular_color;
-			} else {
-				color = color + sphere->mat->color * 0.1;
-			}
-		}
+		Vec3 next_color=compute_color(depth+1,scattering_ray,bvh_root);
 
-		if(depth<5&&mat->reflectivity>0){
-			Vec3 reflect_dir = ray.direction - normal * (2.0 * normal.dot(ray.direction));
-			Ray reflect_ray(Vec3(p+normal*0.001),reflect_dir);
-			Vec3 reflect_color=compute_color(depth+1,reflect_ray,object,lights,bvh_root);
-			color = color * (1 - mat->reflectivity) + reflect_color * mat->reflectivity;				
-		}
-		
-		if(depth<5&&mat->transparency){
-			Vec3 incident_dir=ray.direction.normalize();
-			bool is_enter=incident_dir.dot(normal)<0;
-			double n1=is_enter?1.0:mat->refractivity;
-			double n2=is_enter?mat->refractivity:1.0;
-			Vec3 N=is_enter? normal :-normal;
-			Vec3 refract_dir=compute_refract_ray(n1,n2,incident_dir,N);
-			if(!(refract_dir.x==0&&refract_dir.y==0&&refract_dir.z==0)){
-				Ray refract_ray(p-N*0.001,refract_dir);
-				Vec3 refract_color=compute_color(depth+1,refract_ray,object,lights,bvh_root);
-				color = color * (1 - mat->transparency) + refract_color * mat->transparency;
-			}
-		} 
+		return mat->color * next_color * mat->albedo  ;
+
 	} else {
-		return Vec3(0.0, 0.0, 1.2);
-	}
+		return  Vec3(135 / 255.0, 206 / 255.0, 235 / 255.0);
+  }
+	
 
-	return color; 
+	return {}; 
 }
