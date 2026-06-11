@@ -1,7 +1,8 @@
 #pragma once
 #include "Vec3.h"
-#include "Object.h"
+
 #include "Ray.h"
+#include "Object.h"
 struct Plane : public Object {
      Vec3 normal;
      double d;
@@ -17,6 +18,6 @@ struct Plane : public Object {
         return normal;
      }
      AABB getbounding()const override{
-        return AABB(Vec3(-1e10, -1e10, -1e10), Vec3(1e10, 1e10, 1e10));
+        return AABB(Vec3(-100.0, -1.01, -100.0), Vec3(100.0, -0.99, 100.0));
      }
 };

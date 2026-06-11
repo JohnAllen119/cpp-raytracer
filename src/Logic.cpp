@@ -1,13 +1,38 @@
 #include "../include/Logic.h"
-
+#include "../include/Material.h"
+Vec3 random_vector(){
+    double r1=(double)std::rand()/RAND_MAX;
+    double r2=(double)std::rand()/RAND_MAX;
+    double theta=2.0*std::acos(-1.0)*r1;
+    double phi =std::acos(2.0*r2-1.0);
+    return Vec3(std::sin(phi)*std::cos(theta),std::sin(phi)*std::cos(theta),std::cos(phi));
+}
+bool MetalMaterial::scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation)const{
+	Vec3 reflect_dir=(rayIn.direction-normal*2.0*(rayIn.direction.dot(normal))).normalize();
+	if(roughness>0){
+		Vec3 random_offset=random_vector()*roughness;
+        reflect_dir=(reflect_dir+random_offset).normalize();	
+	}
+	if(reflect_dir.dot(normal)<=0){
+		return false;
+	}
+	scatter=Ray(hitpoint+normal*0.001,reflect_dir);
+	attenuation=color;
+	return true;
+}
 struct ObjectComparator {
     int axis;
     ObjectComparator(int a) : axis(a) {}
     bool operator()(Object* a, Object* b) const {
-        return a->getbounding().min[axis] < b->getbounding().min[axis];
+        return a->getbounding().min_bound[axis] < b->getbounding().min_bound[axis];
     }
 };
-
+bool LambertianMaterial:: scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation)const {
+	Vec3 random_dir=random_hemisphere_direction(normal).normalize();
+	scatter=Ray(hitpoint+random_dir*0.001,random_dir);
+	attenuation=color*albedo;
+	return true;
+}
 BVHNode *build_bvh(std::vector<Object*>&objects,int start,int end,int depth){
 	if(start==end){
 		BVHNode *node=new BVHNode();
@@ -120,19 +145,17 @@ Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root){
 		//ensure normal dir
 		if(normal.dot(ray.direction)>0) normal=-normal;
 
-		//produce random_dir
-		Vec3 random_dir=random_hemisphere_direction(normal);
-		//produce random scattering dir
-		Ray scattering_ray(p+normal*0.001,random_dir);
-
-		Vec3 next_color=compute_color(depth+1,scattering_ray,bvh_root);
-
-		return mat->color * next_color * mat->albedo  ;
+		Ray scatter;
+		Vec3 attenuation;
+		if(mat->scatter(ray,normal,p,scatter,attenuation)){
+			return attenuation * compute_color(depth+1, scatter, bvh_root);
+		}
+		
+		return Vec3(0, 0, 0);
 
 	} else {
-		return  Vec3(135 / 255.0, 206 / 255.0, 235 / 255.0);
-  }
+		return Vec3(135 / 255.0, 206 / 255.0, 235 / 255.0);
+	}
 	
-
-	return {}; 
+	return Vec3(0, 0, 0); 
 }
