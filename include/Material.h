@@ -20,6 +20,12 @@ class MetalMaterial: public Material{
 	MetalMaterial(Vec3 c,double r) :color(c),roughness(r){}
 	bool scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation)const override;
 };
+class DielectricMaterial:public Material{
+	public:
+	double ir;
+	DielectricMaterial(double a):ir(a){}
+	bool scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation)const override;
+};
 struct Light{
 	Vec3 color;
 	double intensity;

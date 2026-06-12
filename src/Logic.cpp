@@ -1,5 +1,6 @@
 #include "../include/Logic.h"
 #include "../include/Material.h"
+#include "algorithm"
 Vec3 random_vector(){
     double r1=(double)std::rand()/RAND_MAX;
     double r2=(double)std::rand()/RAND_MAX;
@@ -33,6 +34,58 @@ bool LambertianMaterial:: scatter(const Ray &rayIn,const Vec3 &normal,const Vec3
 	attenuation=color*albedo;
 	return true;
 }
+Vec3 refract(const Vec3& uv, const Vec3& n, double etai_over_etat) {
+    
+    double cos_theta = uv.dot(n);
+    if (cos_theta > 1.0) cos_theta = 1.0;
+    if (cos_theta < -1.0) cos_theta = -1.0;
+  
+    Vec3 r_in_perp = uv - n * cos_theta;
+    Vec3 r_out_perp = r_in_perp * etai_over_etat;
+    
+    double r_out_perp_x_sq = r_out_perp.x * r_out_perp.x;
+    double r_out_perp_y_sq = r_out_perp.y * r_out_perp.y;
+    double r_out_perp_z_sq = r_out_perp.z * r_out_perp.z;
+    double r_out_perp_len_sq = r_out_perp_x_sq + r_out_perp_y_sq + r_out_perp_z_sq;
+
+    double sin_theta_out_sq = r_out_perp_len_sq;
+    double cos_theta_out = std::sqrt(std::abs(1.0 - sin_theta_out_sq));
+
+    Vec3 r_out_parallel = -n * cos_theta_out;
+    
+    return r_out_perp + r_out_parallel;
+}
+
+double reflectance(double cosine,double ref_idx){
+    double r0=(1-ref_idx)/(1+ref_idx);
+    r0=r0*r0;
+    return r0+(1-r0)*pow((1-cosine),5);
+}
+bool DielectricMaterial::scatter (const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation) const{
+	attenuation=Vec3(1.0,1.0,1.0);
+	double etai_over_tat;
+	Vec3 outward_normal;
+	if(rayIn.direction.dot(normal)>0){
+		outward_normal=-normal;
+		etai_over_tat=ir;
+	}else{
+		outward_normal=normal;
+		etai_over_tat=1.0/ir;
+	}
+	Vec3 unit_direction=rayIn.direction.normalize();
+	double cos_theta= std::min(outward_normal.dot(-unit_direction),1.0);
+	double sin_theta=std::sqrt(1.0-cos_theta*cos_theta);
+	Vec3 scattered_dir;
+	bool cannot_refract=etai_over_tat*sin_theta>1.0;
+	if(cannot_refract||reflectance(cos_theta,etai_over_tat)>(double) std::rand()/RAND_MAX){
+		scattered_dir=unit_direction-outward_normal*2*unit_direction.dot(outward_normal);
+		scattered_dir=scattered_dir.normalize();
+	}else{
+		scattered_dir=refract(unit_direction,outward_normal,etai_over_tat);
+	}
+		scatter=Ray(hitpoint+outward_normal*0.001,scattered_dir);
+		return true;
+	}
 BVHNode *build_bvh(std::vector<Object*>&objects,int start,int end,int depth){
 	if(start==end){
 		BVHNode *node=new BVHNode();
