@@ -1,6 +1,9 @@
 #include "../include/Logic.h"
 #include "../include/Material.h"
 #include "algorithm"
+
+int MAX_DEPTH = 5;
+bool USE_RUSSIAN_ROULETTE = true;
 Vec3 random_vector(){
     double r1=(double)std::rand()/RAND_MAX;
     double r2=(double)std::rand()/RAND_MAX;
@@ -180,9 +183,7 @@ Vec3 random_hemisphere_direction(const Vec3 &normal) {
 }
 
 Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root){
-	if(depth>=5){
-		return Vec3(0,0,0);
-	}
+	
 	//bvh
 	bvh_hit_object=NULL;
 	double obj_t=bvh_intersect(bvh_root,ray);
@@ -200,11 +201,18 @@ Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root){
 
 		Ray scatter;
 		Vec3 attenuation;
-		if(mat->scatter(ray,normal,p,scatter,attenuation)){
-			return attenuation * compute_color(depth+1, scatter, bvh_root);
+		if(!mat->scatter(ray,normal,p,scatter,attenuation)){
+			return Vec3(0, 0, 0);
 		}
-		
-		return Vec3(0, 0, 0);
+		if(depth>=MAX_DEPTH&&USE_RUSSIAN_ROULETTE){
+			double p=std::max(attenuation.x,std::max(attenuation.y,attenuation.z));
+			p=std::max(0.1,std::min(1.0,p));
+			if((double)std::rand()/RAND_MAX>p){
+				return Vec3(0.0,0.0,0.0);
+			}
+			return attenuation*compute_color(depth+1,scatter,bvh_root)/p;
+		}
+		return attenuation*compute_color(depth+1,scatter,bvh_root);
 
 	} else {
 		return Vec3(135 / 255.0, 206 / 255.0, 235 / 255.0);

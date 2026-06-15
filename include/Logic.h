@@ -12,6 +12,8 @@
 #include <cstdlib>
 #include <algorithm>
 #include "BVHNode.h"
+extern int MAX_DEPTH;
+extern bool USE_RUSSIAN_ROULETTE;
 Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root);
 BVHNode *build_bvh(std::vector<Object*> &objects,int start,int end,int depth=0);
 extern Object* bvh_hit_object;

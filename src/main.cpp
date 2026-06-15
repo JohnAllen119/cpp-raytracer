@@ -9,35 +9,63 @@
 #include "../include/Plane.h"
 #include "../include/Logic.h"
 #include "../include/BVHNode.h"
-
+#include <chrono>
+int md;
+bool urr;
+const int SSP=200;
 int main(int argc, char** argv) {
-	const int height = 100;
-    const int width = 200;
-    const int pixle_sample=10000; 
+	md=MAX_DEPTH;
+	urr=USE_RUSSIAN_ROULETTE;
+	const int height = 200;
+    const int width = 400;
+    double samples_per_pixel = SSP;
     double aspect_ratio = double(width) / height;
 	std::ofstream out("output/image.ppm", std::ios::trunc);
 	out << "P3\n" << width << " " << height << "\n255\n";
 	std::vector<Object*> objects;
-	
-	Object* sphere1 = new Sphere(1.0, Vec3(0, 0, -2), new LambertianMaterial(Vec3(0.8, 0.2, 0.2),0.8));
-	Object* ground = new Plane(Vec3(0, 1, 0), -1.0, new LambertianMaterial(Vec3(0.3, 0.3, 0.3), 0.8));
 
-    objects.push_back(ground);
-	objects.push_back(sphere1);
+	// 1. dielectric (glass)
 	objects.push_back(
-    new Sphere( 0.5,Vec3(-2, 0, -2),
-               new MetalMaterial(Vec3(0.8, 0.8, 0.8), 0.0)));
+		new Sphere(Vec3(-1.0, 0.2, -1.8), 0.5, new DielectricMaterial(1.5)));
 
+	// 2. golden-metal
+	objects.push_back(new Sphere(Vec3(-0.2, 0, -2.2), 0.4,
+								new MetalMaterial(Vec3(1.0, 0.8, 0.2), 0.1)));
+
+	// 3. red-lambertian
 	objects.push_back(
-    new Sphere(0.4,Vec3(0.8, 0, -2), 
-               new MetalMaterial(Vec3(1.0, 1.0, 0.2), 0.2)));
+		new Sphere(Vec3(0.8, 0.1, -1.9), 0.45,
+				   new LambertianMaterial(Vec3(1.0, 0.2, 0.2), 0.8)));
 
-	BVHNode* bvh_root = build_bvh(objects, 0, objects.size()-1, 0);
+	// 4. blue-lambertian
+	objects.push_back(
+		new Sphere(Vec3(0, 0.5, -3.5), 0.35,
+				   new LambertianMaterial(Vec3(0.2, 0.3, 0.8), 0.8)));
+
+	// plane (green)
+	objects.push_back(
+		new Plane(Vec3(0, 1, 0), -1.0,
+				  new LambertianMaterial(Vec3(0.3, 0.5, 0.3), 0.9)));
+
+	std::chrono::high_resolution_clock::time_point start_bvh =
+		  std::chrono::high_resolution_clock::now();
+	BVHNode *bvh_root = build_bvh(objects, 0, objects.size() - 1);
+	std::chrono::high_resolution_clock::time_point end_bvh =
+		  std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> bvh_time = end_bvh - start_bvh;
+	std::cout << "BVH build time: " << bvh_time.count() << " seconds\n";
+
+	int total_pixels = width * height;
+	int processed_pixels = 0;
+	int last_percent = 0;
+
+	std::chrono::high_resolution_clock::time_point start_render =
+		  std::chrono::high_resolution_clock::now();
 
 	for (int j = height - 1; j >= 0; j--) {
         for (int i = 0; i < width; ++i) {
         	Vec3 color(0,0,0);
-        	for(int s=0;s<pixle_sample;s++){
+        	for(int s=0;s<samples_per_pixel;s++){
         		double dx=((double)std::rand()/RAND_MAX)-0.5;
                 double dy=((double)std::rand()/RAND_MAX)-0.5;
         		double u = (double(i)+dx) / width;
@@ -53,7 +81,7 @@ int main(int argc, char** argv) {
 			Vec3 ray_color = compute_color(0, ray, bvh_root);
 			color = color + ray_color;
         	}
-            color = color / pixle_sample;
+            color = color / (double)samples_per_pixel;
 
 			double gamma = 2.2;
 			color.x = std::pow(color.x, 1.0/gamma);
@@ -65,13 +93,33 @@ int main(int argc, char** argv) {
 			int g = int(255 * color.y);
 			int b = int(255 * color.z);
 			out << r << " " << g << " " << b << "\n";
+
+			processed_pixels++;
+			int current_percent = (processed_pixels * 100) / total_pixels;
+			if (current_percent >= last_percent + 10) {
+				std::cout << "Render progress: " << current_percent << "%\n";
+				last_percent = current_percent;
+			}
         }
     }
-	
+	std::chrono::high_resolution_clock::time_point end_render =
+		  std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> render_time = end_render - start_render;
+
+	long long total_rays = (long long)width * height * samples_per_pixel;
+	double rays_per_second = total_rays / render_time.count();
+
+	std::cout << "Render time: " << render_time.count() << " seconds\n";
+	std::cout << "Total rays: " << total_rays << "\n";
+	std::cout << "Rays per second: " << rays_per_second << " rays/s\n";
+
 	for (int k = 0; k < objects.size(); ++k) {
 		delete objects[k]->mat;
 		delete objects[k];
 	}
 
+	delete bvh_root;
+
+	out.close();
 	return 0;
 }
