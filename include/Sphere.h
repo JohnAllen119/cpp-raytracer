@@ -8,7 +8,7 @@ struct Sphere :public Object{
 	Vec3 center;
 	double radius;
 	
-	Sphere(double r,Vec3 c,Material *ma):radius(r),center(c),Object(ma){}
+	Sphere(Vec3 c,double r,Material *ma):center(c),radius(r),Object(ma){}
 	
 	double is_hit(const Ray &ray)const override{
 		Vec3 oc=ray.origin-center;
