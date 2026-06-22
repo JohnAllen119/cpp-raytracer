@@ -1,9 +1,57 @@
 #include "../include/Logic.h"
 #include "../include/Material.h"
 #include "algorithm"
-
+#include "../include/Texture.h"
 int MAX_DEPTH = 5;
 bool USE_RUSSIAN_ROULETTE = true;
+ImageTexture::ImageTexture(const char* filename){
+    std::ifstream file(filename,std::ios::binary);
+    if(!file){
+        std::cerr<<"Error: Cannot open image: "<<filename<<std::endl;
+        data=NULL;
+        width=0;
+        height=0;
+        return ;
+    }
+    //checheout whether it's PPM(P6)
+    std::string header;
+    file>>header;
+    if(header !="P6"){
+        std::cerr<<"Error: Not a PPM file!"<<std::endl;
+        data =NULL;
+        width=0;
+        height=0;
+        return ;
+    }
+    //get information
+    file>>width>>height;
+    int max_val;
+    file>>max_val;
+    file.ignore();
+    //distribute the RAM
+    data =new unsigned char[3*width*height];
+    file.read((char*)data,3*width*height);
+}
+Vec3 ImageTexture::value(double u,double v,const Vec3 &p)const{
+	if(data==NULL) return Vec3(0,0,0);
+	u=u-floor(u);
+	v=v-floor(v);
+
+	int i=static_cast<int>(u*width);
+    int j=static_cast<int>((1-v)*height-0.001);
+
+    if(i<0) i=0;
+    if(i>=width) i=width-1;
+    if(j<0) j=0;
+    if(j>=height) j=height-1;
+
+    const unsigned char *pixel=data+3*(j*width+i);
+    double r=static_cast<double>(pixel[0])/255.0;
+    double g=static_cast<double>(pixel[1])/255.0;
+    double b=static_cast<double>(pixel[2])/255.0;
+    return Vec3(r,g,b);
+
+}
 Vec3 random_vector(){
     double r1=(double)std::rand()/RAND_MAX;
     double r2=(double)std::rand()/RAND_MAX;
@@ -11,7 +59,7 @@ Vec3 random_vector(){
     double phi =std::acos(2.0*r2-1.0);
     return Vec3(std::sin(phi)*std::cos(theta),std::sin(phi)*std::cos(theta),std::cos(phi));
 }
-bool MetalMaterial::scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation)const{
+bool MetalMaterial::scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation,Object* obj)const{
 	Vec3 reflect_dir=(rayIn.direction-normal*2.0*(rayIn.direction.dot(normal))).normalize();
 	if(roughness>0){
 		Vec3 random_offset=random_vector()*roughness;
@@ -21,7 +69,9 @@ bool MetalMaterial::scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpo
 		return false;
 	}
 	scatter=Ray(hitpoint+normal*0.001,reflect_dir);
-	attenuation=color;
+	double u,v;
+	obj->getuv(u,v,hitpoint);
+	attenuation=texture->value(u,v,hitpoint);
 	return true;
 }
 struct ObjectComparator {
@@ -31,10 +81,12 @@ struct ObjectComparator {
         return a->getbounding().min_bound[axis] < b->getbounding().min_bound[axis];
     }
 };
-bool LambertianMaterial:: scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation)const {
+bool LambertianMaterial:: scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation,Object* obj)const {
 	Vec3 random_dir=random_hemisphere_direction(normal).normalize();
 	scatter=Ray(hitpoint+random_dir*0.001,random_dir);
-	attenuation=color*albedo;
+	double u=0,v=0;
+	obj->getuv(u,v,hitpoint);
+	attenuation=texture->value(u,v,hitpoint)*albedo;
 	return true;
 }
 Vec3 refract(const Vec3& uv, const Vec3& n, double etai_over_etat) {
@@ -64,7 +116,7 @@ double reflectance(double cosine,double ref_idx){
     r0=r0*r0;
     return r0+(1-r0)*pow((1-cosine),5);
 }
-bool DielectricMaterial::scatter (const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation) const{
+bool DielectricMaterial::scatter (const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation,Object* obj) const{
 	attenuation=Vec3(1.0,1.0,1.0);
 	double etai_over_tat;
 	Vec3 outward_normal;
@@ -122,52 +174,32 @@ BVHNode *build_bvh(std::vector<Object*>&objects,int start,int end,int depth){
 
 Object *bvh_hit_object=NULL;
 
-double bvh_intersect(BVHNode *node,const Ray &ray){
-	if(!node) return -1;
-	if(!node->box.intersect(ray)) return -1;
+bool bvh_intersect(BVHNode *node,double t_min,double t_max,const Ray &ray,hit_record& rec){
+	if(!node) return false;
+	if(!node->box.intersect(ray)) return false;
 	if(node->obj){
-		double t=node->obj->is_hit(ray);
-		if(t>0){
-			bvh_hit_object=node->obj;
-			return t;
-		}
-		return -1;
+		return node->obj->is_hit(ray,t_min,t_max,rec);
 	}
-	double t_left=-1;
-	double t_right=-1;
-	Object *obj_left=NULL;
-	Object *obj_right=NULL;
+
+	bool hit_left = false, hit_right = false;
+	hit_record left_rec, right_rec;
 	
-	if(node->left){
-		Object *prev_hit=bvh_hit_object;
-		t_left=bvh_intersect(node->left,ray);
-		obj_left=bvh_hit_object;
-		bvh_hit_object=prev_hit;
+	if(node->left) hit_left = bvh_intersect(node->left, t_min, t_max, ray, left_rec);
+	if(node->right) hit_right = bvh_intersect(node->right, t_min, t_max, ray, right_rec);
+	
+	if(hit_left && hit_right){
+		rec = (left_rec.t < right_rec.t) ? left_rec : right_rec;
+		return true;
 	}
-	if(node->right){
-		Object *prev_hit=bvh_hit_object;
-		t_right=bvh_intersect(node->right,ray);
-		obj_right=bvh_hit_object;
-		bvh_hit_object=prev_hit;
+	if(hit_left){
+		rec = left_rec;
+		return true;
 	}
-	if(t_right>0&&t_left>0){
-		if(t_left<t_right){
-			bvh_hit_object=obj_left;
-			return t_left;
-		}else{
-			bvh_hit_object=obj_right;
-			return t_right;
-		}
+	if(hit_right){
+		rec = right_rec;
+		return true;
 	}
-	if(t_left>0){
-		bvh_hit_object=obj_left;
-		return t_left;
-	}
-	if(t_right>0){
-		bvh_hit_object=obj_right;
-		return t_right;
-	}
-	return -1;
+	return false;
 }	
 
 Vec3 random_hemisphere_direction(const Vec3 &normal) {
@@ -183,25 +215,28 @@ Vec3 random_hemisphere_direction(const Vec3 &normal) {
 }
 
 Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root){
+	hit_record rec;
 	
-	//bvh
-	bvh_hit_object=NULL;
-	double obj_t=bvh_intersect(bvh_root,ray);
-	Object *hitObj=bvh_hit_object;
+	
 
-	
-	if(obj_t > 0&&hitObj){
-		Object *sphere=hitObj;
-		Material* mat=sphere->mat; 
-		Vec3 p=ray.at(obj_t);
-		Vec3 normal=sphere->getnormal(p).normalize(); 
+	if(bvh_intersect(bvh_root,0.000001,1e10,ray,rec)){
+		Object *obj=rec.obj;
+		Material* mat=rec.mat; 
+		
+		if(!obj || !mat){
+			std::cerr << "Error: obj or mat is null!" << std::endl;
+			return Vec3(0, 0, 0);
+		}
+		
+		Vec3 p=rec.p;
+		Vec3 normal=rec.normal;
 
 		//ensure normal dir
 		if(normal.dot(ray.direction)>0) normal=-normal;
 
 		Ray scatter;
 		Vec3 attenuation;
-		if(!mat->scatter(ray,normal,p,scatter,attenuation)){
+		if(!mat->scatter(ray,normal,p,scatter,attenuation,obj)){
 			return Vec3(0, 0, 0);
 		}
 		if(depth>=MAX_DEPTH&&USE_RUSSIAN_ROULETTE){

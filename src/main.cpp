@@ -9,6 +9,7 @@
 #include "../include/Plane.h"
 #include "../include/Logic.h"
 #include "../include/BVHNode.h"
+#include "../include/Texture.h"
 #include <chrono>
 int md;
 bool urr;
@@ -30,22 +31,32 @@ int main(int argc, char** argv) {
 
 	// 2. golden-metal
 	objects.push_back(new Sphere(Vec3(-0.2, 0, -2.2), 0.4,
-								new MetalMaterial(Vec3(1.0, 0.8, 0.2), 0.1)));
+								new MetalMaterial(new SolidColorTexture(Vec3(1.0, 0.8, 0.2)), 0.1)));
 
 	// 3. red-lambertian
 	objects.push_back(
 		new Sphere(Vec3(0.8, 0.1, -1.9), 0.45,
-				   new LambertianMaterial(Vec3(1.0, 0.2, 0.2), 0.8)));
+				   new LambertianMaterial(new SolidColorTexture(Vec3(1.0, 0.2, 0.2)), 0.8)));
 
 	// 4. blue-lambertian
 	objects.push_back(
 		new Sphere(Vec3(0, 0.5, -3.5), 0.35,
-				   new LambertianMaterial(Vec3(0.2, 0.3, 0.8), 0.8)));
+				   new LambertianMaterial(new SolidColorTexture(Vec3(0.2, 0.3, 0.8)), 0.8)));
 
-	// plane (green)
+	// 5. cyan-metal (high roughness)
+	objects.push_back(
+		new Sphere(Vec3(1.5, 0.3, -2.5), 0.3,
+				   new MetalMaterial(new SolidColorTexture(Vec3(0.0, 1.0, 1.0)), 0.5)));
+
+	// 6. purple-lambertian
+	objects.push_back(
+		new Sphere(Vec3(-1.5, 0.6, -3.0), 0.4,
+				   new LambertianMaterial(new SolidColorTexture(Vec3(0.8, 0.2, 0.8)), 0.9)));
+
+	// plane (checkerboard)
 	objects.push_back(
 		new Plane(Vec3(0, 1, 0), -1.0,
-				  new LambertianMaterial(Vec3(0.3, 0.5, 0.3), 0.9)));
+				  new LambertianMaterial(new CheckerTexture(Vec3(0.8, 0.8, 0.8), Vec3(0.2, 0.2, 0.2), 0.5), 0.9)));
 
 	std::chrono::high_resolution_clock::time_point start_bvh =
 		  std::chrono::high_resolution_clock::now();
