@@ -7,23 +7,25 @@ public:
   Vec2 uv0, uv1, uv2;
   Triangle(Vec3 v0, Vec3 v1, Vec3 v2, Material *mat)
       : v0(v0), v1(v1), v2(v2), Object(mat), uv0(0, 0), uv1(0, 0), uv2(0, 0) {}
+  Triangle(Vec3 v0, Vec3 v1, Vec3 v2)
+      : v0(v0), v1(v1), v2(v2), Object(nullptr), uv0(0, 0), uv1(0, 0), uv2(0, 0) {}
   bool is_hit(const Ray &ray, double t_min, double t_max,
               hit_record &rec) const override {
     Vec3 E1 = v1 - v0;
     Vec3 E2 = v2 - v0;
-    Vec3 P = ray.direction.cross(E1);
-    double det = E2.dot(P);
+    Vec3 P = ray.direction.cross(E2);
+    double det = E1.dot(P);
 
-    if (std::abs(det) < 1e-6)
+    if (det > -1e-6 && det < 1e-6)
       return false;
     double inv_det = 1.0 / det;
     Vec3 T = ray.origin - v0;
     double u = T.dot(P) * inv_det;
-    if (u < 0 || u > 1)
+    if (u < 0.0 || u > 1.0)
       return false;
     Vec3 Q = T.cross(E1);
     double v = ray.direction.dot(Q) * inv_det;
-    if (v < 0 || u + v > 1)
+    if (v < 0.0 || u + v > 1.0)
       return false;
 
     double t = E2.dot(Q) * inv_det;

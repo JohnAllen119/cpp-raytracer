@@ -4,6 +4,19 @@
 #include "../include/Texture.h"
 int MAX_DEPTH = 5;
 bool USE_RUSSIAN_ROULETTE = true;
+void validate_scene(const std::vector<Object*>& objs) {
+    for (size_t i = 0; i < objs.size(); i++) {
+        if (objs[i] == nullptr) {
+            std::cerr << "Error: Object at index " << i << " is nullptr!" << std::endl;
+            exit(1);
+        }
+        if (objs[i]->mat == nullptr) {
+            std::cerr << "Error: Object at index " << i << " has nullptr material!" << std::endl;
+            exit(1);
+        }
+    }
+    std::cout << "Scene validation passed: all objects have valid materials." << std::endl;
+}
 ImageTexture::ImageTexture(const char* filename){
     std::ifstream file(filename,std::ios::binary);
     if(!file){

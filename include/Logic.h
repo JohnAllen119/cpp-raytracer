@@ -19,3 +19,4 @@ BVHNode *build_bvh(std::vector<Object*> &objects,int start,int end,int depth=0);
 extern Object* bvh_hit_object;
 double bvh_intersect(BVHNode *node,const Ray &ray);
 Vec3 random_hemisphere_direction(const Vec3 &normal);
+void validate_scene(const std::vector<Object*>& objs);
