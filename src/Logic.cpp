@@ -72,7 +72,16 @@ Vec3 random_vector(){
     double phi =std::acos(2.0*r2-1.0);
     return Vec3(std::sin(phi)*std::cos(theta),std::sin(phi)*std::cos(theta),std::cos(phi));
 }
-bool MetalMaterial::scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation,Object* obj)const{
+bool MetalMaterial::scatter(
+    const Ray &rayIn,
+    const Vec3 &normal,
+    const Vec3 hitpoint,
+    double u,
+    double v,
+    Ray &scatter,
+    Vec3 &attenuation,
+    Object* obj
+) const {
 	Vec3 reflect_dir=(rayIn.direction-normal*2.0*(rayIn.direction.dot(normal))).normalize();
 	if(roughness>0){
 		Vec3 random_offset=random_vector()*roughness;
@@ -82,8 +91,7 @@ bool MetalMaterial::scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpo
 		return false;
 	}
 	scatter=Ray(hitpoint+normal*0.001,reflect_dir);
-	double u,v;
-	obj->getuv(u,v,hitpoint);
+	
 	attenuation=texture->value(u,v,hitpoint);
 	return true;
 }
@@ -94,11 +102,19 @@ struct ObjectComparator {
         return a->getbounding().min_bound[axis] < b->getbounding().min_bound[axis];
     }
 };
-bool LambertianMaterial:: scatter(const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation,Object* obj)const {
+bool LambertianMaterial::scatter(
+    const Ray &rayIn,
+    const Vec3 &normal,
+    const Vec3 hitpoint,
+    double u,
+    double v,
+    Ray &scatter,
+    Vec3 &attenuation,
+    Object* obj
+) const {
 	Vec3 random_dir=random_hemisphere_direction(normal).normalize();
 	scatter=Ray(hitpoint+random_dir*0.001,random_dir);
-	double u=0,v=0;
-	obj->getuv(u,v,hitpoint);
+	
 	attenuation=texture->value(u,v,hitpoint)*albedo;
 	return true;
 }
@@ -129,7 +145,7 @@ double reflectance(double cosine,double ref_idx){
     r0=r0*r0;
     return r0+(1-r0)*pow((1-cosine),5);
 }
-bool DielectricMaterial::scatter (const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,Ray &scatter,Vec3 &attenuation,Object* obj) const{
+bool DielectricMaterial::scatter (const Ray &rayIn,const Vec3 &normal,const Vec3 hitpoint,double u,double v,Ray &scatter,Vec3 &attenuation,Object* obj) const{
 	attenuation=Vec3(1.0,1.0,1.0);
 	double etai_over_tat;
 	Vec3 outward_normal;
@@ -249,7 +265,7 @@ Vec3 compute_color(int depth,const Ray &ray,BVHNode *bvh_root){
 
 		Ray scatter;
 		Vec3 attenuation;
-		if(!mat->scatter(ray,normal,p,scatter,attenuation,obj)){
+		if(!mat->scatter(ray,normal,p,rec.u,rec.v,scatter,attenuation,obj)){
 			return Vec3(0, 0, 0);
 		}
 		if(depth>=MAX_DEPTH&&USE_RUSSIAN_ROULETTE){

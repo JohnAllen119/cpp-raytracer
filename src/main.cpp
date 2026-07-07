@@ -27,8 +27,7 @@ int main(int argc, char **argv) {
   out << "P3\n" << width << " " << height << "\n255\n";
   std::vector<Object *> objects;
   OBJData data = OBJData::load("quad.obj");
-  std::cout << "vertices: " << data.vertices.size() << std::endl;
-  std::cout << "faces: " << data.faces.size() << std::endl;
+
 
   Mesh *mesh = new Mesh(
       data,
