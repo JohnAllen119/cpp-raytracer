@@ -41,13 +41,13 @@ struct Sphere :public Object{
 	}
 	
 	void getuv(double &u,double &v,const Vec3 &hitPoint)const override{
-        const double M_PI=acos(-1.0);
+       const double pi = 3.14159265358979323846;
         Vec3 p=hitPoint-center;
         p.normalize();
         double theta=atan2(p.z,p.x);
         double phi=acos(p.y);
-        u=(theta+M_PI)/(2*M_PI);
-        v=phi/M_PI;
+        u=(theta+pi)/(2*pi);
+        v=phi/pi;
     }
 	Vec3 getnormal(const Vec3 &p)const override{
 		 Vec3 tmp=p-center;

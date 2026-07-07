@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <limits>
 #include "OBJLoader.h"
+
 class Mesh:public Object{
 private:
     std::vector<Triangle> triangles;

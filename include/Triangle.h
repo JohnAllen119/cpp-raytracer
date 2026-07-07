@@ -9,7 +9,9 @@ public:
       : v0(v0), v1(v1), v2(v2), Object(mat), uv0(0, 0), uv1(0, 0), uv2(0, 0) {}
   Triangle(Vec3 v0, Vec3 v1, Vec3 v2)
       : v0(v0), v1(v1), v2(v2), Object(nullptr), uv0(0, 0), uv1(0, 0), uv2(0, 0) {}
-  bool is_hit(const Ray &ray, double t_min, double t_max,
+   Triangle(Vec3 a, Vec3 b, Vec3 c, Vec2 uv0,Vec2 uv1,Vec2 uv2, Material *mat)
+      : v0(a), v1(b), v2(c), uv0(uv0),uv1(uv1),uv2(uv2),Object(mat) {}
+      bool is_hit(const Ray &ray, double t_min, double t_max,
               hit_record &rec) const override {
     Vec3 E1 = v1 - v0;
     Vec3 E2 = v2 - v0;

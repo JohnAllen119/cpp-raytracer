@@ -3,22 +3,42 @@
 
 Mesh::Mesh(const OBJData& data) : Object(nullptr) {
     for (const auto& face : data.faces) {
-        int i = face[0];
-        int j = face[1];
-        int k = face[2];
+        int i = face.indices[0].v_index;
+        int j = face.indices[1].v_index;
+        int k = face.indices[2].v_index;
         triangles.emplace_back(data.vertices[i], data.vertices[j], data.vertices[k], nullptr);
     }
 }
 
 Mesh::Mesh(const OBJData& data, Material* m) : Object(m) {
     for (const auto& face : data.faces) {
-        int i = face[0];
-        int j = face[1];
-        int k = face[2];
-        triangles.emplace_back(data.vertices[i], data.vertices[j], data.vertices[k], m);
+        int i = face.indices[0].v_index;
+        int j = face.indices[1].v_index;
+        int k = face.indices[2].v_index;
+
+        Vec3 p0=data.vertices[i];
+        Vec3 p1=data.vertices[j];
+        Vec3 p2=data.vertices[k];
+
+        int uv_i=face.indices[0].vt_index;
+        int uv_j=face.indices[1].vt_index;
+        int uv_k=face.indices[2].vt_index;
+
+        bool has_uv=uv_i >= 0 && uv_j >= 0 && uv_k >= 0 &&
+                  uv_i < data.texcoords.size() &&
+                  uv_j < data.texcoords.size() && uv_k < data.texcoords.size();
+
+        if(has_uv){
+            Vec2 uv0=data.texcoords[uv_i];
+            Vec2 uv1=data.texcoords[uv_j];
+            Vec2 uv2=data.texcoords[uv_k];
+            triangles.emplace_back(p0, p1, p2,uv0,uv1,uv2, m);
+        }else {
+      triangles.emplace_back(p0, p1, p2, m);
+        
     }
 }
-
+}
 Vec3 Mesh::getnormal(const Vec3& point) const {
     if (triangles.empty()) return Vec3(0, 1, 0);
     return triangles[0].getnormal(point);
