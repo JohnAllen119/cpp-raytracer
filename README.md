@@ -1,110 +1,230 @@
-# Whitted-Style Ray Tracer
+# C++ Ray Tracer / Path Tracer
 
-Educational CPU-based Whitted-style ray tracing renderer in C++.
+Educational CPU-based ray tracing renderer implemented in C++.
+
+This project started as a Whitted-style ray tracer and has gradually evolved into a small path tracing renderer with material abstraction, BVH acceleration, texture mapping, and OBJ mesh loading.
 
 ## Overview
 
-This is a ray tracing renderer implemented for learning purposes. It implements core ray tracing techniques including
-spherical and planar intersections, BVH acceleration, diffuse/specular lighting, reflection/refraction,
-ambient occlusion, and supersampling anti-aliasing.
+This project is built from scratch for learning computer graphics and C++ engineering.
+
+It focuses on the complete rendering pipeline:
+
+```text
+Scene
+→ Camera Ray Generation
+→ BVH Traversal
+→ Ray-Object Intersection
+→ Hit Record
+→ Material Scatter
+→ Texture Sampling
+→ Recursive Color Evaluation
+→ PPM Output
+```
+
+The current version supports spheres, planes, triangles, OBJ meshes, image textures, checker textures, BVH acceleration, and OBJ `v / vt / vn` asset import.
+
+The project is now entering the V1.0 polishing stage. The main goal is no longer adding more features, but improving documentation, project presentation, stability, and explanation quality.
 
 ## Features
 
 ### Core Rendering
+
 - [x] Perspective camera ray generation
-- [x] Whitted-style recursive ray tracing
-- [x] Supersampling anti-aliasing (16x)
-- [x] Gamma correction (2.2)
+- [x] Recursive ray color evaluation
+- [x] Path tracing style material scattering
+- [x] Supersampling anti-aliasing
+- [x] Gamma correction
 - [x] PPM image output
+- [x] Render statistics output
 
 ### Geometry & Intersection
-- [x] Sphere intersection (quadratic solver)
-- [x] Plane intersection (infinite)
-- [x] AABB bounding box (3-axis slab method)
-- [x] BVH (Bounding Volume Hierarchy) acceleration structure
 
-### Lighting & Materials
-- [x] Lambert diffuse reflection
-- [x] Blinn-Phong specular highlight
-- [x] Shadow ray tracing
-- [x] Perfect mirror reflection (recursive, 5 depth)
-- [x] Refraction/Transparency (Fresnel + Snell's law)
-- [x] Ambient Occlusion (hemisphere sampling, BVH accelerated)
-- [x] Multiple light sources (spherical lights)
+- [x] Sphere intersection
+- [x] Plane intersection
+- [x] Triangle intersection using Möller-Trumbore algorithm
+- [x] Mesh object composed of triangles
+- [x] AABB bounding box
+- [x] BVH acceleration structure
 
-## Technical Implementation
+### Materials
 
-### BVH Acceleration Structure
-- **Building**: Recursively divides objects by alternating axes. Sorts objects by bounding box min on the current axis, splits in the middle, and merges children's AABBs.
-- **Intersection**: Traverses BVH tree, testing bounding boxes first to prune entire branches quickly. Returns nearest hit.
-- **Complexity**: O(log n) intersection vs O(n) brute-force.
+- [x] Lambertian diffuse material
+- [x] Metal material with roughness
+- [x] Dielectric material with refraction
+- [x] Schlick approximation for reflectance
+- [x] Material abstraction through virtual `scatter()`
 
-### Ambient Occlusion
-- **Sampling**: Generates random directions on hemisphere around normal using cosine-weighted sampling.
-- **Testing**: Casts occlusion rays, checks for nearby intersections within max distance (2 units).
-- **AO Factor**: 1 - (occlusion ratio * 0.8). Darkens creases and corners.
+### Textures
 
-### Reflection & Refraction
-- **Reflection**: Reflects incoming direction across normal using dot product.
-- **Refraction**: Uses Snell's law to compute transmitted direction. Handles total internal reflection.
+- [x] Checker texture
+- [x] PPM image texture
+- [x] Texture abstraction
+- [x] UV-based texture sampling
+- [x] OBJ mesh texture mapping through `vt`
 
-### Material System
-Each object has a material with:
-- `color`: Base albedo RGB
-- `albedo`: Diffuse reflectivity
-- `specular`: Phong exponent for shininess
-- `reflectivity`: Mirror reflection blend
-- `transparency`: Refractive transmission blend
-- `refractivity`: Index of refraction (e.g., 1.5 for glass)
+### OBJ Mesh Loading
 
-## Current Limitations
-- Single-threaded rendering only
-- Limited geometry (only spheres and infinite planes)
-- No texture mapping
-- Lights are point sources with hard shadows
-- No depth of field, motion blur, or caustics
-- BVH uses simple median split (not SAH heuristic)
+- [x] OBJ vertex position parsing: `v`
+- [x] OBJ texture coordinate parsing: `vt`
+- [x] OBJ vertex normal parsing: `vn`
+- [x] OBJ face parsing: `f v/vt/vn`
+- [x] Mesh construction from OBJ faces
+- [x] Triangle UV interpolation
+- [x] Vertex normal interpolation for smooth shading
 
-## Future Work
-- [ ] Multithreading (OpenMP or task-based parallelism)
-- [ ] Triangle meshes (OBJ loading)
-- [ ] Importance sampling for AO
-- [ ] Texture mapping support
-- [ ] Soft shadows (area lights)
-- [ ] Depth of field and motion blur
-- [ ] HDR environment maps
-- [ ] SAH (Surface Area Heuristic) for better BVH
+## Build
 
-## Project Structure
+Using Git Bash / MSYS2 on Windows:
+
+```bash
+g++ src/*.cpp -Iinclude -o raytracer
 ```
+
+If using the provided Makefile:
+
+```bash
+make
+```
+
+## Run
+
+```bash
+./raytracer.exe
+```
+
+or:
+
+```bash
+./raytracer
+```
+
+The renderer outputs a `.ppm` image file.
+
+## Example Render Statistics
+
+Example result from the current version:
+
+```text
+Scene validation passed: all objects have valid materials.
+BVH build time: 2.37e-05 seconds
+Render progress: 100%
+Render time: 61.9576 seconds
+Total rays: 16000000
+Rays per second: 258241 rays/s
+```
+
+## Asset Import Pipeline
+
+The OBJ mesh data flow is:
+
+```text
+OBJ file
+→ OBJLoader
+→ OBJData(vertices, texcoords, normals, faces)
+→ Mesh
+→ Triangle
+→ hit_record
+→ Material / Texture
+→ Final color
+```
+
+## UV Texture Pipeline
+
+The OBJ texture coordinate pipeline is:
+
+```text
+OBJ vt
+→ OBJData.texcoords
+→ Mesh
+→ Triangle uv0 / uv1 / uv2
+→ barycentric interpolation
+→ rec.u / rec.v
+→ ImageTexture::value(u, v, p)
+→ Final color
+```
+
+This means reading `vt` from an OBJ file is not enough. The UV data must continue through Mesh, Triangle, hit record, and Material before it can affect the final image.
+
+## Vertex Normal Pipeline
+
+The OBJ vertex normal pipeline is:
+
+```text
+OBJ vn
+→ OBJData.normals
+→ Mesh
+→ Triangle n0 / n1 / n2
+→ barycentric interpolation
+→ rec.normal
+→ Material scatter
+→ Final color
+```
+
+This allows smooth shading by interpolating vertex normals at the hit point instead of using only one face normal per triangle.
+
+Smooth shading does not change the actual geometry. It changes the normal used for lighting calculation, making the rendered surface appear smoother.
+
+## Main Structure
+
+```text
 raytracer/
-├── include/
-│   ├── AABB.h          # AABB bounding box
-│   ├── BVHNode.h       # BVH node structure
-│   ├── Logic.h         # Rendering functions declaration
-│   ├── Material.h      # Material and Light structures
-│   ├── Object.h        # Abstract Object base class
-│   ├── Plane.h         # Plane geometry
-│   ├── Ray.h           # Ray structure
-│   ├── Sphere.h        # Sphere geometry
-│   └── Vec3.h          # 3D vector math
-├── src/
-│   ├── Logic.cpp       # Rendering functions implementation
-│   └── main.cpp        # Scene setup & entry point
-├── output/             # Rendered images (gitignored)
-├── Makefile
+├── include/            # Header files
+├── src/                # Source files
+├── output/             # Rendered images
+├── Makefile            # Linux / general build script
+├── Makefile.win        # Windows build script
+├── compile.bat         # Windows compile helper
 ├── .gitignore
 └── README.md
 ```
 
-## Building & Running
-```bash
-make
-./raytracer
-# Outputs to output/image.ppm
-# View with a PPM viewer or convert to PNG using ImageMagick:
-# convert output/image.ppm output/image.png
-```
+Important modules:
+
+- `OBJLoader`: parses OBJ `v / vt / vn / f` data
+- `Mesh`: converts OBJ faces into triangles
+- `Triangle`: handles intersection, UV interpolation, and normal interpolation
+- `Material`: defines scattering behavior
+- `Texture`: provides procedural or image-based color sampling
+- `BVH`: accelerates ray-object intersection
+- `Logic`: handles recursive ray color computation
+
+## Current Project Status
+
+The current version has completed:
+
+- Basic recursive rendering pipeline
+- Material abstraction
+- Texture abstraction
+- BVH acceleration
+- OBJ mesh loading
+- OBJ UV texture mapping
+- OBJ vertex normal smooth shading
+- Render statistics output
+- Stable compilation and execution on the current Windows/MSYS2 environment
+
+This project has moved beyond the initial “render a few spheres” stage and now has a relatively complete rendering and asset import pipeline.
+
+## Current Limitations
+
+- Single-threaded CPU rendering only
+- PPM image input/output only
+- No mesh-level BVH inside large OBJ models yet
+- Scene construction is still hard-coded in C++
+- No advanced sampling strategy such as MIS
+- No GUI or real-time preview
+- Limited image format support
+
+## Future Work
+
+- [ ] Add mesh-level BVH for complex OBJ models
+- [ ] Improve scene configuration
+- [ ] Add more image formats
+- [ ] Improve sampling strategy
+- [ ] Add better render output workflow
+- [ ] Improve project documentation and visual presentation
+- [ ] Prepare V1.0 project review and resume description
 
 ## License
-This project is created for educational purposes. Feel free to use it for learning.
+
+This project is created for educational purposes.
