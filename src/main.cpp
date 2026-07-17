@@ -31,36 +31,22 @@ int main(int argc, char **argv) {
 
   Mesh *mesh = new Mesh(
       data,
-      new LambertianMaterial(new SolidColorTexture(Vec3(0.8, 0.5, 0.5)), 0.9));
+      new LambertianMaterial(
+    new ImageTexture("assets/textures/uv_direction.ppm"), 0.9));
   objects.push_back(mesh);
   // 1. dielectric (glass)
   objects.push_back(
-      new Sphere(Vec3(-1.0, 0.2, -1.8), 0.5, new DielectricMaterial(1.5)));
+      new Sphere(Vec3(-2.4, -0.45, -2.3), 0.55, new DielectricMaterial(1.5)));
 
   // 2. golden-metal
   objects.push_back(new Sphere(
-      Vec3(-0.2, 0, -2.2), 0.4,
+      Vec3(-0.85, -0.5, -2.2), 0.5,
       new MetalMaterial(new SolidColorTexture(Vec3(1.0, 0.8, 0.2)), 0.1)));
 
   // 3. red-lambertian
   objects.push_back(new Sphere(
-      Vec3(0.8, 0.1, -1.9), 0.45,
+      Vec3(0.25, -0.5, -2.0), 0.5,
       new LambertianMaterial(new SolidColorTexture(Vec3(1.0, 0.2, 0.2)), 0.8)));
-
-  // 4. blue-lambertian
-  objects.push_back(new Sphere(
-      Vec3(0, 0.5, -3.5), 0.35,
-      new LambertianMaterial(new SolidColorTexture(Vec3(0.2, 0.3, 0.8)), 0.8)));
-
-  // 5. cyan-metal (high roughness)
-  objects.push_back(new Sphere(
-      Vec3(1.5, 0.3, -2.5), 0.3,
-      new MetalMaterial(new SolidColorTexture(Vec3(0.0, 1.0, 1.0)), 0.5)));
-
-  // 6. purple-lambertian
-  objects.push_back(new Sphere(
-      Vec3(-1.5, 0.6, -3.0), 0.4,
-      new LambertianMaterial(new SolidColorTexture(Vec3(0.8, 0.2, 0.8)), 0.9)));
 
   // plane (checkerboard)
   objects.push_back(new Plane(

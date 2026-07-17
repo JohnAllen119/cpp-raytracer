@@ -17,7 +17,7 @@ static OBJIndex parseOBJIndex(const std::string& token){
         index.v_index=std::stoi(v_str)-1;
     }
     if(!vt_str.empty()){
-        index.vt_index=std::stoi(vt_str);
+        index.vt_index=std::stoi(vt_str)-1;
     }
     if(!vn_str.empty()){
         index.vn_index=std::stoi(vn_str)-1;
