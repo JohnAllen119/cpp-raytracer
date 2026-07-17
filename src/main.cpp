@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   objects.push_back(new Plane(
       Vec3(0, 1, 0), -1.0,
       new LambertianMaterial(
-          new CheckerTexture(Vec3(0.8, 0.8, 0.8), Vec3(0.2, 0.2, 0.2), 0.5),
+          new CheckerTexture(Vec3(0.8, 0.8, 0.8), Vec3(0.2, 0.2, 0.2), 4.0),
           0.9)));
   validate_scene(objects);
   std::chrono::high_resolution_clock::time_point start_bvh =

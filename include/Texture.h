@@ -1,6 +1,7 @@
 #ifndef TEXTURE_H
 #define TEXTURE_H
 #include "Vec3.h"
+#include <cmath>
 class Texture{
 public:
     virtual Vec3 value(double u,double v,const Vec3 &p) const=0;
@@ -23,7 +24,7 @@ public:
 
     CheckerTexture(const Vec3 &c1,const Vec3 &c2,double s=1.0):color1(c1),color2(c2),scale(s){}
     Vec3 value(double u,double v,const Vec3 &p)const override{
-        double sines = sin(scale * u) * sin(scale * v);
+        double sines = sin(scale * p.x) * sin(scale * p.z);
         if(sines > 0){
             return color1;
         }else{

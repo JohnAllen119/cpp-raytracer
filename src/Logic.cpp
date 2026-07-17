@@ -70,7 +70,7 @@ Vec3 random_vector(){
     double r2=(double)std::rand()/RAND_MAX;
     double theta=2.0*std::acos(-1.0)*r1;
     double phi =std::acos(2.0*r2-1.0);
-    return Vec3(std::sin(phi)*std::cos(theta),std::sin(phi)*std::cos(theta),std::cos(phi));
+    return Vec3(std::sin(phi)*std::cos(theta),std::sin(phi)*std::sin(theta),std::cos(phi));
 }
 bool MetalMaterial::scatter(
     const Ray &rayIn,
