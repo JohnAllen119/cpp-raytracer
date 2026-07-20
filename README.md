@@ -4,6 +4,12 @@ Educational CPU-based ray tracing renderer implemented in C++.
 
 This project started as a Whitted-style ray tracer and has gradually evolved into a small path tracing renderer with material abstraction, BVH acceleration, texture mapping, and OBJ mesh loading.
 
+## Showcase
+
+![Ray Tracer showcase](docs/images/showcase.png)
+
+Final V1.0 showcase scene rendered at 400 × 200 resolution with 200 samples per pixel. The scene demonstrates Lambertian, metal and dielectric materials, OBJ mesh loading, UV image texture mapping, and a world-space checker texture.
+
 ## Overview
 
 This project is built from scratch for learning computer graphics and C++ engineering.
@@ -107,11 +113,10 @@ Example result from the current version:
 
 ```text
 Scene validation passed: all objects have valid materials.
-BVH build time: 2.37e-05 seconds
 Render progress: 100%
-Render time: 61.9576 seconds
+Render time: 11.9476 seconds
 Total rays: 16000000
-Rays per second: 258241 rays/s
+Rays per second: 1.33918e+06 rays/s
 ```
 
 ## Asset Import Pipeline
